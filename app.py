@@ -353,11 +353,12 @@ modo_motor = st.sidebar.radio(
 api_key_input = ""
 if modo_motor == "Inteligencia Artificial (Gemini API)":
     api_key_input = st.sidebar.text_input(
-        "API Key de Gemini (Opcional)", 
-        type="password", 
-        placeholder="Déjalo en blanco si usas el entorno por defecto",
-        help="Si Canvas provee la API key automáticamente en runtime, puedes dejar este campo vacío."
-    )
+    "API Key de Gemini", 
+    value="AQ.Ab8RN6Iey9TXKZ_TSeZnO992l2MjqUnDed_6AHHL9JOyW4OK-w",
+    type="password", 
+    placeholder="Ingresa tu API Key de Gemini",
+    help="Clave API configurada para la autenticación automática con Gemini."
+)
 
 uploaded_file = st.sidebar.file_uploader(
     "Cargar archivo de datos", 
