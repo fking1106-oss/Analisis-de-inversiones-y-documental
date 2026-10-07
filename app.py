@@ -254,13 +254,111 @@ def clasificar_accion(descripcion):
 
 
 # ============================================================
+# INTEGRACIÓN DE IA (GEMINI API)
+# ============================================================
+
+def clasificar_con_ia(descripcion, api_key=""):
+    """
+    Clasifica una descripción de actividad utilizando la API de Gemini (gemini-3-flash-preview)
+    con un esquema estructurado (JSON).
+    """
+    import json
+    import urllib.request
+    import urllib.error
+
+    system_prompt = (
+        "Eres un analista financiero y experto en gestión de proyectos corporativos. "
+        "Tu tarea es clasificar la descripción de una actividad empresarial en una de estas tres categorías exactas:\n"
+        "1. INVERSIÓN: Adquisición de activos, equipos, maquinaria, tecnología, construcción, remodelación, infraestructura o reparaciones físicas.\n"
+        "2. DOCUMENTAL: Informes, manuales, procedimientos, formatos, políticas, capacitación, actas o gestión administrativa/documental.\n"
+        "3. REVISIÓN MANUAL: Si es completamente ambigua o no encaja claramente en ninguna de las anteriores.\n\n"
+        "Devuelve la respuesta estrictamente en formato JSON."
+    )
+
+    user_query = f"Clasifica la siguiente actividad: '{descripcion}'"
+
+    payload = {
+        "contents": [{"parts": [{"text": user_query}]}],
+        "systemInstruction": {
+            "parts": [{"text": system_prompt}]
+        },
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {
+                    "clasificacion": {
+                        "type": "STRING",
+                        "enum": ["INVERSIÓN", "DOCUMENTAL", "REVISIÓN MANUAL"]
+                    },
+                    "confianza": {
+                        "type": "INTEGER",
+                        "description": "Porcentaje de confianza de 0 a 100"
+                    },
+                    "motivo": {
+                        "type": "STRING",
+                        "description": "Breve explicación del motivo de la clasificación"
+                    }
+                },
+                "propertyOrdering": ["clasificacion", "confianza", "motivo"]
+            }
+        }
+    }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+    
+    headers = {'Content-Type': 'application/json'}
+    data = json.dumps(payload).encode('utf-8')
+
+    # Reintentos con retroceso exponencial simple
+    import time
+    delay = 1
+    for intento in range(3):
+        try:
+            req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                candidate = result.get('candidates', [{}])[0]
+                part_text = candidate.get('content', {}).get('parts', [{}])[0].get('text', '{}')
+                parsed = json.loads(part_text)
+                return {
+                    "clasificacion": parsed.get("clasificacion", "REVISIÓN MANUAL"),
+                    "confianza": parsed.get("confianza", 85),
+                    "motivo": parsed.get("motivo", "Clasificado mediante Inteligencia Artificial (Gemini).")
+                }
+        except Exception as e:
+            if intento == 2:
+                # Si falla la IA, hacemos fallback al motor de reglas local
+                res_local = clasificar_accion(descripcion)
+                res_local["motivo"] += " (Fallback local por error de API)."
+                return res_local
+            time.sleep(delay)
+            delay *= 2
+
+
+# ============================================================
 # INTERFAZ DE STREAMLIT
 # ============================================================
 
 st.sidebar.title("⚙️ Panel de Control")
 st.sidebar.info(
-    "Sube tu archivo Excel (`.xlsx`) o CSV corporativo con las descripciones de actividades para comenzar el análisis automático con alta precisión de NLP."
+    "Sube tu archivo Excel (`.xlsx`) o CSV corporativo con las descripciones de actividades para comenzar el análisis automático."
 )
+
+# Opciones de motor de clasificación
+modo_motor = st.sidebar.radio(
+    "Selecciona el Motor de Clasificación:",
+    ["Motor de Reglas (NLP Local)", "Inteligencia Artificial (Gemini API)"]
+)
+
+api_key_input = ""
+if modo_motor == "Inteligencia Artificial (Gemini API)":
+    api_key_input = st.sidebar.text_input(
+        "API Key de Gemini (Opcional)", 
+        type="password", 
+        placeholder="Déjalo en blanco si usas el entorno por defecto",
+        help="Si Canvas provee la API key automáticamente en runtime, puedes dejar este campo vacío."
+    )
 
 uploaded_file = st.sidebar.file_uploader(
     "Cargar archivo de datos", 
@@ -268,15 +366,15 @@ uploaded_file = st.sidebar.file_uploader(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 Criterios de Clasificación Mejorados")
+st.sidebar.markdown("### 📋 Criterios de Clasificación")
 st.sidebar.markdown("""
 - **INVERSIÓN:** Equipos, infraestructura, construcción, remodelación, maquinaria, activos, tecnología y reparaciones físicas.
 - **DOCUMENTAL:** Informes, manuales, procedimientos, formatos, políticas, capacitación y gestión administrativa.
-- **REVISIÓN MANUAL:** Casos altamente ambiguos (umbral reducido al mínimo).
+- **REVISIÓN MANUAL:** Casos altamente ambiguos.
 """)
 
 st.title("📊 Clasificador Inteligente de Actividades Empresariales")
-st.markdown("Clasifica de forma automática tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL** mediante motores avanzados de expresiones regulares de alta precisión.")
+st.markdown(f"Clasifica de forma automática tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL** utilizando **{modo_motor}**.")
 
 if uploaded_file is not None:
     try:
@@ -294,13 +392,17 @@ if uploaded_file is not None:
         )
         
         if st.button("🚀 Analizar y Clasificar Actividades"):
-            with st.spinner("Analizando descripciones con alta precisión..."):
+            with st.spinner(f"Analizando descripciones con {modo_motor}..."):
                 resultados = []
                 confianzas = []
                 motivos = []
                 
                 for item in df[selected_column]:
-                    res = clasificar_accion(item)
+                    if modo_motor == "Inteligencia Artificial (Gemini API)":
+                        res = clasificar_con_ia(item, api_key=api_key_input)
+                    else:
+                        res = clasificar_accion(item)
+                        
                     resultados.append(res["clasificacion"])
                     confianzas.append(res["confianza"])
                     motivos.append(res["motivo"])
@@ -309,7 +411,7 @@ if uploaded_file is not None:
                 df['Confianza (%)'] = confianzas
                 df['Motivo / Detalle'] = motivos
             
-            st.toast("¡Clasificación de alta precisión completada!", icon="✅")
+            st.toast("¡Clasificación completada con éxito!", icon="✅")
             
             st.markdown("---")
             st.subheader("📈 Resumen Ejecutivo de Resultados")
@@ -355,7 +457,7 @@ if uploaded_file is not None:
             st.download_button(
                 label="📥 Descargar archivo completo en Excel",
                 data=processed_data,
-                file_name="actividades_clasificadas_alta_precision.xlsx",
+                file_name="actividades_clasificadas_ia.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
@@ -382,7 +484,7 @@ else:
     }
     sample_df = pd.DataFrame(sample_data)
     
-    st.dataframe(sample_df, use_container_width=True)
+    st.dataframe(sample_df, use_keyword=True if 'use_keyword' in locals() else True, use_container_width=True)
     
     output_sample = BytesIO()
     with pd.ExcelWriter(output_sample, engine='openpyxl') as writer:
