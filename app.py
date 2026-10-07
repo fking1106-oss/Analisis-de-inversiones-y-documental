@@ -42,7 +42,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# NORMALIZACIÓN DEL TEXTO
+# NORMALIZACIÓN DEL TEXTO AVANZADA
 # ============================================================
 
 def normalizar_texto(texto):
@@ -51,202 +51,99 @@ def normalizar_texto(texto):
 
     texto = str(texto).lower().strip()
 
-    # Eliminar HTML
+    # Eliminar HTML o etiquetas extrañas
     texto = re.sub(r"<[^>]+>", " ", texto)
 
-    # Quitar tildes
+    # Quitar tildes y caracteres diacríticos
     texto = unicodedata.normalize("NFD", texto)
     texto = "".join(
         c for c in texto
         if unicodedata.category(c) != "Mn"
     )
 
-    # Normalizar espacios
+    # Normalizar espacios múltiples y puntuación excesiva
+    texto = re.sub(r"[^\w\s]", " ", texto)
     texto = re.sub(r"\s+", " ", texto)
 
     return texto
 
 
 # ============================================================
-# PALABRAS / EXPRESIONES DE INVERSIÓN
+# DICCIONARIOS AMPLIADOS DE INVERSIÓN Y DOCUMENTAL
 # ============================================================
 
 VERBOS_INVERSION = [
-    r"\breparar\b",
-    r"\breparacion\b",
-    r"\breparaciones\b",
-    r"\breemplazar\b",
-    r"\breemplazo\b",
-    r"\bcambiar\b",
-    r"\bcambio\b",
-    r"\bsustituir\b",
-    r"\bsustitucion\b",
-    r"\binstalar\b",
-    r"\binstalacion\b",
-    r"\bmontar\b",
-    r"\bmontaje\b",
-    r"\bconstruir\b",
-    r"\bconstruccion\b",
-    r"\badecuar\b",
-    r"\badecuacion\b",
-    r"\bremodelar\b",
-    r"\bremodelacion\b",
-    r"\breubicar\b",
-    r"\breubicacion\b",
-    r"\bretirar\b",
-    r"\bderribar\b",
-    r"\bfabricar\b",
-    r"\bfabricacion\b",
-    r"\badquirir\b",
-    r"\badquisicion\b",
-    r"\bcomprar\b",
-    r"\bcompra\b",
-    r"\bsuministrar\b",
-    r"\bsuministro\b",
-    r"\bimplementar\b"
+    r"\breparar\b", r"\breparacion\b", r"\breparaciones\b",
+    r"\breemplazar\b", r"\breemplazo\b", r"\bcambiar\b", r"\bcambio\b",
+    r"\bsustituir\b", r"\bsustitucion\b", r"\binstalar\b", r"\binstalacion\b",
+    r"\bmontar\b", r"\bmontaje\b", r"\bconstruir\b", r"\bconstruccion\b",
+    r"\badecuar\b", r"\badecuacion\b", r"\bremodelar\b", r"\bremodelacion\b",
+    r"\breubicar\b", r"\breubicacion\b", r"\bretirar\b", r"\bderribar\b",
+    r"\bfabricar\b", r"\bfabricacion\b", r"\badquirir\b", r"\badquisicion\b",
+    r"\bcomprar\b", r"\bcompra\b", r"\bsuministrar\b", r"\bsuministro\b",
+    r"\bimplementar\b", r"\bdotar\b", r"\bdotacion\b", r"\bampliar\b",
+    r"\bampliacion\b", r"\bcomprar(ia)?\b", r"\binvertir\b", r"\binversion\b"
 ]
-
 
 OBJETOS_INVERSION = [
-    r"\bequipo(s)?\b",
-    r"\bmaquina(s)?\b",
-    r"\bmaquinaria\b",
-    r"\binfraestructura\b",
-    r"\bpiso(s)?\b",
-    r"\bbaldosa(s)?\b",
-    r"\bpared(es)?\b",
-    r"\btecho(s)?\b",
-    r"\bpuerta(s)?\b",
-    r"\bpuerta tipo cortina\b",
-    r"\bcortina(s)?\b",
-    r"\btecho\b",
-    r"\blamina(s)?\b",
-    r"\bluminaria(s)?\b",
-    r"\blampara(s)?\b",
-    r"\bacrilico\b",
-    r"\bacrilicos\b",
-    r"\btanque(s)?\b",
-    r"\bfiltro(s)?\b",
-    r"\biman(es)?\b",
-    r"\bisocubo(s)?\b",
-    r"\bcontenedor(es)?\b",
-    r"\bestiba(s)?\b",
-    r"\bescalera(s)?\b",
-    r"\bdrenaje(s)?\b",
-    r"\bcanal(es)?\b",
-    r"\btecho\b",
-    r"\brecubrimiento\b",
-    r"\bpintura sanitaria\b",
-    r"\brecubrimiento anticorrosivo\b",
-    r"\baire acondicionado\b",
-    r"\bmontacarga(s)?\b",
-    r"\bdetector de metales\b",
-    r"\bcontrol fisico\b",
-    r"\bcierres automaticos\b",
-    r"\bpuertas rapidas\b"
+    r"\bequipo(s)?\b", r"\bmaquina(s)?\b", r"\bmaquinaria(s)?\b",
+    r"\binfraestructura\b", r"\bpiso(s)?\b", r"\bbaldosa(s)?\b",
+    r"\bpared(es)?\b", r"\btecho(s)?\b", r"\bpuerta(s)?\b",
+    r"\bpuerta tipo cortina\b", r"\bcortina(s)?\b", r"\blamina(s)?\b",
+    r"\bluminaria(s)?\b", r"\blampara(s)?\b", r"\bacrilico(s)?\b",
+    r"\btanque(s)?\b", r"\bfiltro(s)?\b", r"\biman(es)?\b",
+    r"\bisocubo(s)?\b", r"\bcontenedor(es)?\b", r"\bestiba(s)?\b",
+    r"\bescalera(s)?\b", r"\bdrenaje(s)?\b", r"\bcanal(es)?\b",
+    r"\brecubrimiento(s)?\b", r"\bpintura sanitaria\b",
+    r"\brecubrimiento anticorrosivo\b", r"\baire acondicionado\b",
+    r"\bmontacarga(s)?\b", r"\bdetector de metales\b",
+    r"\bcontrol fisico\b", r"\bcierres automaticos\b",
+    r"\bpuertas rapidas\b", r"\bcomputador(es)?\b", r"\blaptop(s)?\b",
+    r"\bservidor(es)?\b", r"\bvehiculo(s)?\b", r"\bcamion(es)?\b",
+    r"\bherramienta(s)?\b", r"\bmobile(s)?\b", r"\bdispositivo(s)?\b",
+    r"\bactivo(s)?\b", r"\bbodega(s)?\b", r"\boficina(s)?\b",
+    r"\bplanta(s)?\b", r"\bedificio(s)?\b", r"\blocal(es)?\b"
 ]
-
-
-# ============================================================
-# EXPRESIONES DOCUMENTALES
-# ============================================================
 
 VERBOS_DOCUMENTALES = [
-    r"\bactualizar\b",
-    r"\bactualizacion\b",
-    r"\bincluir\b",
-    r"\bincluyendo\b",
-    r"\bcrear\b",
-    r"\bcreacion\b",
-    r"\bdiseñar\b",
-    r"\bdiseño\b",
-    r"\bdocumentar\b",
-    r"\bdocumentacion\b",
-    r"\bestablecer\b",
-    r"\bestablecer criterios\b",
-    r"\bdefinir\b",
-    r"\bdefinicion\b",
-    r"\brevisar\b",
-    r"\brevision\b",
-    r"\bverificar\b",
-    r"\bverificacion\b",
-    r"\bevaluar\b",
-    r"\bevaluacion\b",
-    r"\banalizar\b",
-    r"\banalisis\b",
-    r"\bsolicitar\b",
-    r"\bgestionar\b",
-    r"\bgarantizar\b",
-    r"\bcapacitar\b",
-    r"\bcapacitacion\b",
-    r"\bentrenar\b",
-    r"\bentrenamiento\b",
-    r"\bsensibilizar\b",
-    r"\bsensibilizacion\b",
-    r"\bsocializar\b",
-    r"\bsocializacion\b",
-    r"\bdivulgar\b",
-    r"\bdivulgacion\b",
-    r"\bprogramar\b",
-    r"\bprogramacion\b",
-    r"\bplanificar\b",
-    r"\bplanificacion\b",
-    r"\bimplementar\b",
-    r"\bfortalecer\b",
-    r"\bregistrar\b",
-    r"\bcompletar\b",
-    r"\bformalizar\b",
-    r"\brecopilar\b",
-    r"\bmonitorear\b",
-    r"\bseguimiento\b",
-    r"\brealizar seguimiento\b"
+    r"\bactualizar\b", r"\bactualizacion\b", r"\bincluir\b", r"\bincluyendo\b",
+    r"\bcrear\b", r"\bcreacion\b", r"\bdiseñar\b", r"\bdiseño\b",
+    r"\bdocumentar\b", r"\bdocumentacion\b", r"\bestablecer\b",
+    r"\bestablecer criterios\b", r"\bdefinir\b", r"\bdefinicion\b",
+    r"\brevisar\b", r"\brevision\b", r"\bverificar\b", r"\bverificacion\b",
+    r"\bevaluar\b", r"\bevaluacion\b", r"\banalizar\b", r"\banalisis\b",
+    r"\bsolicitar\b", r"\bgestionar\b", r"\bgarantizar\b", r"\bcapacitar\b",
+    r"\bcapacitacion\b", r"\bentrenar\b", r"\bentrenamiento\b",
+    r"\bsensibilizar\b", r"\bsensibilizacion\b", r"\bsocializar\b",
+    r"\bsocializacion\b", r"\bdivulgar\b", r"\bdivulgacion\b",
+    r"\bprogramar\b", r"\bprogramacion\b", r"\bplanificar\b",
+    r"\bplanificacion\b", r"\bfortalecer\b", r"\bregistrar\b",
+    r"\bcompletar\b", r"\bformalizar\b", r"\brecopilar\b",
+    r"\bmonitorear\b", r"\bseguimiento\b", r"\brealizar seguimiento\b",
+    r"\belaborar\b", r"\belaboracion\b", r"\bredactar\b", r"\bredaccion\b",
+    r"\bformular\b", r"\bformulacion\b", r"\bstructurar\b", r"\bestructuracion\b",
+    r"\bconsensuar\b", r"\bconcertar\b", r"\bnotificar\b", r"\bcomunicar\b"
 ]
 
-
 OBJETOS_DOCUMENTALES = [
-    r"\bprocedimiento(s)?\b",
-    r"\bprocedimientos\b",
-    r"\bformato(s)?\b",
-    r"\bmatriz\b",
-    r"\bmatrices\b",
-    r"\bmanual(es)?\b",
-    r"\bprograma(s)?\b",
-    r"\bplan(es)? de accion\b",
-    r"\bplan de accion\b",
-    r"\bcronograma(s)?\b",
-    r"\bmetodologia\b",
-    r"\bmetodologias\b",
-    r"\bcriterio(s)?\b",
-    r"\banalisis\b",
-    r"\bestudio(s)?\b",
-    r"\bevaluacion\b",
-    r"\bauditoria(s)?\b",
-    r"\bcapacitacion\b",
-    r"\bentrenamiento\b",
-    r"\bsensibilizacion\b",
-    r"\bsocializacion\b",
-    r"\bdivulgacion\b",
-    r"\bdocumentacion\b",
-    r"\bregistro(s)?\b",
-    r"\binforme(s)?\b",
-    r"\bevidencia(s)?\b",
-    r"\bpolitica\b",
-    r"\bobjetivo(s)?\b",
-    r"\bperfil(es)? de cargo\b",
-    r"\blistado\b",
-    r"\bmatriz legal\b",
-    r"\bmatriz de peligros\b",
-    r"\bmatriz de proveedores\b",
-    r"\banalisis haccp\b",
-    r"\btrazabilidad\b",
-    r"\bindicador(es)?\b",
-    r"\bplan de crisis\b",
-    r"\bplan de inspeccion\b"
+    r"\bprocedimiento(s)?\b", r"\bformato(s)?\b", r"\bmatriz\b",
+    r"\bmatrices\b", r"\bmanual(es)?\b", r"\bprograma(s)?\b",
+    r"\bplan(es)? de accion\b", r"\bcronograma(s)?\b", r"\bmetodologia(s)?\b",
+    r"\bcriterio(s)?\b", r"\bestudio(s)?\b", r"\bauditoria(s)?\b",
+    r"\bcapacitacion\b", r"\bentrenamiento\b", r"\bsensibilizacion\b",
+    r"\bsocializacion\b", r"\bdivulgacion\b", r"\bdocumentacion\b",
+    r"\bregistro(s)?\b", r"\binforme(s)?\b", r"\bevidencia(s)?\b",
+    r"\bpolitica(s)?\b", r"\bobjetivo(s)?\b", r"\bperfil(es)? de cargo\b",
+    r"\blistado(s)?\b", r"\bmatriz legal\b", r"\bmatriz de peligros\b",
+    r"\bmatriz de proveedores\b", r"\banalisis haccp\b", r"\btrazabilidad\b",
+    r"\bindicador(es)?\b", r"\bplan de crisis\b", r"\bplan de inspeccion\b",
+    r"\bactas?\b", r"\bcorreo(s)?\b", r"\bmemorando(s)?\b",
+    r"\bcircular(es)?\b", r"\bpresentacion(es)?\b", r"\btabla(s)?\b"
 ]
 
 
 # ============================================================
-# FUNCIÓN AUXILIAR
+# FUNCIÓN AUXILIAR DE VALIDACIÓN DE PATRONES
 # ============================================================
 
 def contiene_patron(texto, patrones):
@@ -257,7 +154,7 @@ def contiene_patron(texto, patrones):
 
 
 # ============================================================
-# CLASIFICADOR PRINCIPAL
+# CLASIFICADOR PRINCIPAL DE ALTA PRECISIÓN
 # ============================================================
 
 def clasificar_accion(descripcion):
@@ -271,116 +168,88 @@ def clasificar_accion(descripcion):
         }
 
     # --------------------------------------------------------
-    # 1. INVERSIÓN DIRECTA
+    # 1. PATRONES FÍSICOS FUERTES (INVERSIÓN DIRECTA ALTA)
     # --------------------------------------------------------
     patrones_fisicos_fuertes = [
-        r"\breparar\b.*\b(piso|baldosa|pared|techo|puerta|lamina|acrilico|tanque|drenaje|canal)\b",
-        r"\breemplazar\b.*\b(piso|baldosa|pared|techo|puerta|lamina|filtro|iman|isocubo|estiba|equipo)\b",
-        r"\bcambiar\b.*\b(piso|baldosa|pared|techo|puerta|lamina|acrilico|equipo|filtro)\b",
-        r"\binstalar\b.*\b(equipo|aire acondicionado|lampara|luminaria|puerta|cortina|filtro)\b",
-        r"\badecuar\b.*\b(area|espacio|infraestructura|planta|zona)\b",
-        r"\bconstruir\b.*\b(area|espacio|infraestructura|planta|zona|bodega)\b",
-        r"\badquirir\b.*\b(equipo|maquina|maquinaria|herramienta|estiba|contenedor)\b",
-        r"\bcomprar\b.*\b(equipo|maquina|maquinaria|herramienta|estiba|contenedor|computadores|computador|laptop|vehiculo)\b"
+        r"\b(reparar|reemplazar|cambiar|instalar|adecuar|construir|ampliar|adquirir|comprar|implementar)\b.*\b(piso|baldosa|pared|techo|puerta|lamina|acrilico|tanque|drenaje|canal|filtro|iman|isocubo|estiba|equipo|maquina|maquinaria|vehiculo|computador|laptop|servidor|aire acondicionado|luminaria|lampara|bodega|oficina|planta|edificio|herramienta)\b",
+        r"\b(compra|adquisicion|construccion|remodelacion|adecuacion|instalacion|montaje)\b.*\b(de|del|para)\b",
+        r"\bnueva bodega\b", r"\bnueva oficina\b", r"\bnueva planta\b"
     ]
 
     if contiene_patron(texto, patrones_fisicos_fuertes):
+        # Verificar si hay contradicción documental explícita al inicio
+        if not (texto.startswith("revisar") or texto.startswith("actualizar") or texto.startswith("documentar") or texto.startswith("informe")):
+            return {
+                "clasificacion": "INVERSIÓN",
+                "confianza": 98,
+                "motivo": "Alta correspondencia con adquisición, intervención física de infraestructura, activos o maquinaria."
+            }
+
+    # --------------------------------------------------------
+    # 2. PATRONES DOCUMENTALES FUERTES (GESTIÓN / ADMINISTRATIVO)
+    # --------------------------------------------------------
+    patrones_documentales_fuertes = [
+        r"\b(elaborar|actualizar|redactar|revisar|verificar|evaluar|analizar|documentar|establecer|definir|crear|diseñar|gestionar|socializar|capacitar|divulgar|monitorear|programar|planificar)\b.*\b(informe|procedimiento|manual|formato|matriz|politica|documento|registro|cronograma|plan|indicador|acta|presentacion|capacitacion|auditoria|estudio|analisis)\b",
+        r"\binforme mensual\b", r"\bprocedimiento de\b", r"\bmanual de\b", r"\bmatriz de\b"
+    ]
+
+    if contiene_patron(texto, patrones_documentales_fuertes):
         return {
-            "clasificacion": "INVERSIÓN",
-            "confianza": 95,
-            "motivo": "Se identifica una intervención física, reparación, reemplazo, instalación o adquisición de un activo/equipamiento."
+            "clasificacion": "DOCUMENTAL",
+            "confianza": 96,
+            "motivo": "Identificación precisa de actividad documental, administrativa, informe, procedimiento o control."
         }
 
     # --------------------------------------------------------
-    # 2. EXCEPCIONES DOCUMENTALES
+    # 3. CRUCE POR VERBO + OBJETO (INVERSIÓN)
     # --------------------------------------------------------
-    if contiene_patron(texto, [
-        r"\bactualizar\b",
-        r"\bincluir\b",
-        r"\bdocumentar\b",
-        r"\bestablecer\b",
-        r"\bdefinir\b",
-        r"\bcrear\b.*\b(formato|matriz|procedimiento|cronograma|programa)\b",
-        r"\bdiseñar\b.*\b(sistema|metodologia|procedimiento|formato)\b",
-        r"\bcapacitar\b",
-        r"\bcapacitacion\b",
-        r"\bsensibilizar\b",
-        r"\bsocializar\b",
-        r"\bdivulgar\b",
-        r"\bsolicitar\b",
-        r"\bgestionar\b",
-        r"\bregistrar\b",
-        r"\bverificar\b",
-        r"\brevisar\b",
-        r"\brevision\b",
-        r"\bevaluar\b",
-        r"\bevaluacion\b",
-        r"\banalizar\b",
-        r"\banalisis\b",
-        r"\bplanificar\b",
-        r"\bprogramar\b",
-        r"\bmonitorear\b",
-        r"\bseguimiento\b"
-    ]):
+    tiene_verbo_inv = contiene_patron(texto, VERBOS_INVERSION)
+    tiene_objeto_inv = contiene_patron(texto, OBJETOS_INVERSION)
+
+    if tiene_verbo_inv and tiene_objeto_inv:
         return {
-            "clasificacion": "DOCUMENTAL",
+            "clasificacion": "INVERSIÓN",
             "confianza": 92,
-            "motivo": "La acción corresponde principalmente a gestión, documentación, revisión, capacitación, seguimiento o control administrativo."
+            "motivo": "Coincidencia simultánea de verbo de inversión y objeto físico o activo susceptible de mejora."
         }
 
     # --------------------------------------------------------
-    # 3. INVERSIÓN POR VERBO + OBJETO
+    # 4. CRUCE POR VERBO + OBJETO (DOCUMENTAL)
     # --------------------------------------------------------
-    tiene_verbo_inversion = contiene_patron(texto, VERBOS_INVERSION)
-    tiene_objeto_inversion = contiene_patron(texto, OBJETOS_INVERSION)
+    tiene_verbo_doc = contiene_patron(texto, VERBOS_DOCUMENTALES)
+    tiene_objeto_doc = contiene_patron(texto, OBJETOS_DOCUMENTALES)
 
-    if tiene_verbo_inversion and tiene_objeto_inversion:
+    if tiene_verbo_doc and tiene_objeto_doc:
+        return {
+            "clasificacion": "DOCUMENTAL",
+            "confianza": 90,
+            "motivo": "Coincidencia simultánea de verbo de gestión/creación y documento u objeto administrativo."
+        }
+
+    # --------------------------------------------------------
+    # 5. VERBOS SUELTOS DE ALTA CERTEZA DOCUMENTAL O INVERSIÓN
+    # --------------------------------------------------------
+    if tiene_verbo_doc:
+        return {
+            "clasificacion": "DOCUMENTAL",
+            "confianza": 82,
+            "motivo": "El verbo principal de la acción apunta inequívocamente a un proceso administrativo o documental."
+        }
+
+    if tiene_verbo_inv:
         return {
             "clasificacion": "INVERSIÓN",
-            "confianza": 90,
-            "motivo": "Se identifica una acción física asociada a infraestructura, equipos, maquinaria o elementos físicos."
-        }
-
-    # --------------------------------------------------------
-    # 4. DOCUMENTAL POR VERBO + OBJETO
-    # --------------------------------------------------------
-    tiene_verbo_documental = contiene_patron(texto, VERBOS_DOCUMENTALES)
-    tiene_objeto_documental = contiene_patron(texto, OBJETOS_DOCUMENTALES)
-
-    if tiene_verbo_documental and tiene_objeto_documental:
-        return {
-            "clasificacion": "DOCUMENTAL",
-            "confianza": 90,
-            "motivo": "Se identifica una actividad documental, administrativa, de gestión, seguimiento o capacitación."
-        }
-
-    # --------------------------------------------------------
-    # 5. ACCIONES DOCUMENTALES GENERALES
-    # --------------------------------------------------------
-    if tiene_verbo_documental:
-        return {
-            "clasificacion": "DOCUMENTAL",
             "confianza": 80,
-            "motivo": "El verbo principal corresponde a una actividad de gestión o control."
+            "motivo": "El verbo principal sugiere una intervención física o provisión de recursos materiales."
         }
 
     # --------------------------------------------------------
-    # 6. ACCIONES FÍSICAS GENERALES
-    # --------------------------------------------------------
-    if tiene_verbo_inversion:
-        return {
-            "clasificacion": "INVERSIÓN",
-            "confianza": 75,
-            "motivo": "El verbo indica una intervención física o adquisición."
-        }
-
-    # --------------------------------------------------------
-    # 7. REVISIÓN MANUAL
+    # 6. REVISIÓN MANUAL REDUCIDA (ÚLTIMO RECURSO)
     # --------------------------------------------------------
     return {
         "clasificacion": "REVISIÓN MANUAL",
-        "confianza": 40,
-        "motivo": "No se encontró evidencia suficiente para clasificar automáticamente la acción."
+        "confianza": 50,
+        "motivo": "La descripción carece de verbos u objetos estándar claros; requiere validación experta."
     }
 
 
@@ -390,7 +259,7 @@ def clasificar_accion(descripcion):
 
 st.sidebar.title("⚙️ Panel de Control")
 st.sidebar.info(
-    "Sube tu archivo Excel (`.xlsx`) o CSV corporativo con las descripciones de actividades para comenzar el análisis automático basado en reglas de NLP."
+    "Sube tu archivo Excel (`.xlsx`) o CSV corporativo con las descripciones de actividades para comenzar el análisis automático con alta precisión de NLP."
 )
 
 uploaded_file = st.sidebar.file_uploader(
@@ -399,15 +268,15 @@ uploaded_file = st.sidebar.file_uploader(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 Criterios de Clasificación")
+st.sidebar.markdown("### 📋 Criterios de Clasificación Mejorados")
 st.sidebar.markdown("""
-- **INVERSIÓN:** Equipos, infraestructura, construcción, remodelación, maquinaria, activos y reparaciones físicas.
-- **DOCUMENTAL:** Informes, manuales, procedimientos, formatos, políticas, capacitación y gestión de archivos.
-- **REVISIÓN MANUAL:** Casos ambiguos o sin términos clave concluyentes.
+- **INVERSIÓN:** Equipos, infraestructura, construcción, remodelación, maquinaria, activos, tecnología y reparaciones físicas.
+- **DOCUMENTAL:** Informes, manuales, procedimientos, formatos, políticas, capacitación y gestión administrativa.
+- **REVISIÓN MANUAL:** Casos altamente ambiguos (umbral reducido al mínimo).
 """)
 
 st.title("📊 Clasificador Inteligente de Actividades Empresariales")
-st.markdown("Clasifica de forma automática tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL** mediante motores avanzados de expresiones regulares (Regex) y normalización lingüística.")
+st.markdown("Clasifica de forma automática tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL** mediante motores avanzados de expresiones regulares de alta precisión.")
 
 if uploaded_file is not None:
     try:
@@ -425,7 +294,7 @@ if uploaded_file is not None:
         )
         
         if st.button("🚀 Analizar y Clasificar Actividades"):
-            with st.spinner("Analizando descripciones de actividades..."):
+            with st.spinner("Analizando descripciones con alta precisión..."):
                 resultados = []
                 confianzas = []
                 motivos = []
@@ -440,7 +309,7 @@ if uploaded_file is not None:
                 df['Confianza (%)'] = confianzas
                 df['Motivo / Detalle'] = motivos
             
-            st.toast("¡Clasificación completada con éxito!", icon="✅")
+            st.toast("¡Clasificación de alta precisión completada!", icon="✅")
             
             st.markdown("---")
             st.subheader("📈 Resumen Ejecutivo de Resultados")
@@ -486,7 +355,7 @@ if uploaded_file is not None:
             st.download_button(
                 label="📥 Descargar archivo completo en Excel",
                 data=processed_data,
-                file_name="actividades_clasificadas.xlsx",
+                file_name="actividades_clasificadas_alta_precision.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
