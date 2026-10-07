@@ -259,12 +259,13 @@ def clasificar_accion(descripcion):
 
 def clasificar_con_ia(descripcion, api_key=""):
     """
-    Clasifica una descripción de actividad utilizando la API de Gemini (gemini-3-flash-preview)
+    Clasifica una descripción de actividad utilizando la API de Gemini (gemini-3.8-flash)
     con un esquema estructurado (JSON).
     """
     import json
     import urllib.request
     import urllib.error
+    import time
 
     system_prompt = (
         "Eres un analista financiero y experto en gestión de proyectos corporativos. "
@@ -305,18 +306,16 @@ def clasificar_con_ia(descripcion, api_key=""):
         }
     }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
     data = json.dumps(payload).encode('utf-8')
 
-    # Reintentos con retroceso exponencial simple
-    import time
     delay = 1
     for intento in range(3):
         try:
             req = urllib.request.Request(url, data=data, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 result = json.loads(response.read().decode('utf-8'))
                 candidate = result.get('candidates', [{}])[0]
                 part_text = candidate.get('content', {}).get('parts', [{}])[0].get('text', '{}')
@@ -328,9 +327,9 @@ def clasificar_con_ia(descripcion, api_key=""):
                 }
         except Exception as e:
             if intento == 2:
-                # Si falla la IA, hacemos fallback al motor de reglas local
+                # Si falla la IA tras reintentos, usamos fallback al motor local
                 res_local = clasificar_accion(descripcion)
-                res_local["motivo"] += " (Fallback local por error de API)."
+                res_local["motivo"] += f" (Fallback local por error de API: {str(e)[:40]})."
                 return res_local
             time.sleep(delay)
             delay *= 2
