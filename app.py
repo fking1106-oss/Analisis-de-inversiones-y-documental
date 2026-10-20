@@ -82,7 +82,7 @@ VERBOS_INVERSION = [
     r"\bfabricar\b", r"\bfabricacion\b", r"\badquirir\b", r"\badquisicion\b",
     r"\bcomprar\b", r"\bcompra\b", r"\bsuministrar\b", r"\bsuministro\b",
     r"\bimplementar\b", r"\bdotar\b", r"\bdotacion\b", r"\bampliar\b",
-    r"\bampliacion\b", r"\bcomprar(ia)?\b", r"\binvertir\b", r"\binversion\b"
+    r"\bampliacion\b", r"\binvertir\b", r"\binversion\b"
 ]
 
 OBJETOS_INVERSION = [
@@ -121,7 +121,7 @@ VERBOS_DOCUMENTALES = [
     r"\bcompletar\b", r"\bformalizar\b", r"\brecopilar\b",
     r"\bmonitorear\b", r"\bseguimiento\b", r"\brealizar seguimiento\b",
     r"\belaborar\b", r"\belaboracion\b", r"\bredactar\b", r"\bredaccion\b",
-    r"\bformular\b", r"\bformulacion\b", r"\bstructurar\b", r"\bestructuracion\b",
+    r"\bformular\b", r"\bformulacion\b", r"\bestructurar\b", r"\bestructuracion\b",
     r"\bconsensuar\b", r"\bconcertar\b", r"\bnotificar\b", r"\bcomunicar\b"
 ]
 
@@ -154,7 +154,7 @@ def contiene_patron(texto, patrones):
 
 
 # ============================================================
-# CLASIFICADOR PRINCIPAL DE ALTA PRECISIÓN
+# CLASIFICADOR PRINCIPAL DE ALTA PRECISIÓN (LOCAL)
 # ============================================================
 
 def clasificar_accion(descripcion):
@@ -177,7 +177,6 @@ def clasificar_accion(descripcion):
     ]
 
     if contiene_patron(texto, patrones_fisicos_fuertes):
-        # Verificar si hay contradicción documental explícita al inicio
         if not (texto.startswith("revisar") or texto.startswith("actualizar") or texto.startswith("documentar") or texto.startswith("informe")):
             return {
                 "clasificacion": "INVERSIÓN",
@@ -254,110 +253,12 @@ def clasificar_accion(descripcion):
 
 
 # ============================================================
-# INTEGRACIÓN DE IA (GEMINI API)
-# ============================================================
-
-def clasificar_con_ia(descripcion, api_key=""):
-    """
-    Clasifica una descripción de actividad utilizando la API de Gemini (gemini-3.8-flash)
-    con un esquema estructurado (JSON).
-    """
-    import json
-    import urllib.request
-    import urllib.error
-    import time
-
-    system_prompt = (
-        "Eres un analista financiero y experto en gestión de proyectos corporativos. "
-        "Tu tarea es clasificar la descripción de una actividad empresarial en una de estas tres categorías exactas:\n"
-        "1. INVERSIÓN: Adquisición de activos, equipos, maquinaria, tecnología, construcción, remodelación, infraestructura o reparaciones físicas.\n"
-        "2. DOCUMENTAL: Informes, manuales, procedimientos, formatos, políticas, capacitación, actas o gestión administrativa/documental.\n"
-        "3. REVISIÓN MANUAL: Si es completamente ambigua o no encaja claramente en ninguna de las anteriores.\n\n"
-        "Devuelve la respuesta estrictamente en formato JSON."
-    )
-
-    user_query = f"Clasifica la siguiente actividad: '{descripcion}'"
-
-    payload = {
-        "contents": [{"parts": [{"text": user_query}]}],
-        "systemInstruction": {
-            "parts": [{"text": system_prompt}]
-        },
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": {
-                "type": "OBJECT",
-                "properties": {
-                    "clasificacion": {
-                        "type": "STRING",
-                        "enum": ["INVERSIÓN", "DOCUMENTAL", "REVISIÓN MANUAL"]
-                    },
-                    "confianza": {
-                        "type": "INTEGER",
-                        "description": "Porcentaje de confianza de 0 a 100"
-                    },
-                    "motivo": {
-                        "type": "STRING",
-                        "description": "Breve explicación del motivo de la clasificación"
-                    }
-                },
-                "propertyOrdering": ["clasificacion", "confianza", "motivo"]
-            }
-        }
-    }
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
-    
-    headers = {'Content-Type': 'application/json'}
-    data = json.dumps(payload).encode('utf-8')
-
-    delay = 1
-    for intento in range(3):
-        try:
-            req = urllib.request.Request(url, data=data, headers=headers, method='POST')
-            with urllib.request.urlopen(req, timeout=15) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                candidate = result.get('candidates', [{}])[0]
-                part_text = candidate.get('content', {}).get('parts', [{}])[0].get('text', '{}')
-                parsed = json.loads(part_text)
-                return {
-                    "clasificacion": parsed.get("clasificacion", "REVISIÓN MANUAL"),
-                    "confianza": parsed.get("confianza", 85),
-                    "motivo": parsed.get("motivo", "Clasificado mediante Inteligencia Artificial (Gemini).")
-                }
-        except Exception as e:
-            if intento == 2:
-                # Si falla la IA tras reintentos, usamos fallback al motor local
-                res_local = clasificar_accion(descripcion)
-                res_local["motivo"] += f" (Fallback local por error de API: {str(e)[:40]})."
-                return res_local
-            time.sleep(delay)
-            delay *= 2
-
-
-# ============================================================
 # INTERFAZ DE STREAMLIT
 # ============================================================
 
 st.sidebar.title("⚙️ Panel de Control")
 st.sidebar.info(
     "Sube tu archivo Excel (`.xlsx`) o CSV corporativo con las descripciones de actividades para comenzar el análisis automático."
-)
-
-# Opciones de motor de clasificación
-modo_motor = st.sidebar.radio(
-    "Selecciona el Motor de Clasificación:",
-    ["Motor de Reglas (NLP Local)", "Inteligencia Artificial (Gemini API)"]
-)
-
-api_key_input = ""
-if modo_motor == "Inteligencia Artificial (Gemini API)":
-    api_key_input = st.sidebar.text_input(
-    "API Key de Gemini", 
-    value="AQ.Ab8RN6Iey9TXKZ_TSeZnO992l2MjqUnDed_6AHHL9JOyW4OK-w",
-    type="password", 
-    placeholder="Ingresa tu API Key de Gemini",
-    help="Clave API configurada para la autenticación automática con Gemini."
 )
 
 uploaded_file = st.sidebar.file_uploader(
@@ -374,7 +275,7 @@ st.sidebar.markdown("""
 """)
 
 st.title("📊 Clasificador Inteligente de Actividades Empresariales")
-st.markdown(f"Clasifica de forma automática tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL** utilizando **{modo_motor}**.")
+st.markdown("Clasifica de forma automática e instantánea tus actividades corporativas en **INVERSIÓN**, **DOCUMENTAL** o **REVISIÓN MANUAL**.")
 
 if uploaded_file is not None:
     try:
@@ -392,17 +293,13 @@ if uploaded_file is not None:
         )
         
         if st.button("🚀 Analizar y Clasificar Actividades"):
-            with st.spinner(f"Analizando descripciones con {modo_motor}..."):
+            with st.spinner("Analizando descripciones instantáneamente..."):
                 resultados = []
                 confianzas = []
                 motivos = []
                 
                 for item in df[selected_column]:
-                    if modo_motor == "Inteligencia Artificial (Gemini API)":
-                        res = clasificar_con_ia(item, api_key=api_key_input)
-                    else:
-                        res = clasificar_accion(item)
-                        
+                    res = clasificar_accion(item)
                     resultados.append(res["clasificacion"])
                     confianzas.append(res["confianza"])
                     motivos.append(res["motivo"])
@@ -457,7 +354,7 @@ if uploaded_file is not None:
             st.download_button(
                 label="📥 Descargar archivo completo en Excel",
                 data=processed_data,
-                file_name="actividades_clasificadas_ia.xlsx",
+                file_name="actividades_clasificadas.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
@@ -484,7 +381,7 @@ else:
     }
     sample_df = pd.DataFrame(sample_data)
     
-    st.dataframe(sample_df, use_keyword=True if 'use_keyword' in locals() else True, use_container_width=True)
+    st.dataframe(sample_df, use_container_width=True)
     
     output_sample = BytesIO()
     with pd.ExcelWriter(output_sample, engine='openpyxl') as writer:
